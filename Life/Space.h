@@ -12,6 +12,10 @@ typedef SpaceRow::const_iterator SpaceRowIt;
 typedef SpaceCont::const_iterator SpaceContIt;
 
 #define COUNT_NEIGHBOURS 8
+#define COUNT_COLORS 10
+static const QColor sc_cellColors[COUNT_COLORS] = {Qt::white, Qt::lightGray, Qt::yellow, Qt::darkYellow,
+												   Qt::magenta, Qt::darkMagenta, Qt::cyan, Qt::darkCyan, 
+									               Qt::blue, Qt::darkBlue};
 
 class CSpace
 {
@@ -33,6 +37,8 @@ public:
 protected:
 	void resizeMap();
 	void initCont(unsigned int i_width, unsigned int i_height);
+
+	void setCellColor(unsigned int i_nlives);
 
 private:
 	unsigned int m_width;

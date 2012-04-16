@@ -76,6 +76,14 @@ void Creature::Update()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void Creature::PostUpdateSwap()
 {
+	if (m_alive && m_alive == m_futureState)
+	{
+		m_nlives++;
+	}
+	else
+	{
+		m_nlives = 0;
+	}
 	m_alive = m_futureState;
 }
 

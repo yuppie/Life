@@ -125,13 +125,15 @@ void CSpace::Draw(QPainter* i_painter)
 	i_painter->drawRect(0, 0, m_rect.x(), m_rect.y());
 	if (m_scale < 2)
 	{
-		QPen pen(m_brushPoint.color());
+		QPen pen;
 		for (unsigned int i = 0; i != m_width; ++i)
 		{
 			for (unsigned int j = 0; j != m_height; ++j)
 			{
 				if (m_map[i][j]->IsAlive())
-				{					
+				{
+					setCellColor(m_map[i][j]->GetLives());
+					pen.setColor(m_brushPoint.color());
 					i_painter->setPen(pen);
 					i_painter->drawPoint(i,j);
 				}
@@ -147,6 +149,7 @@ void CSpace::Draw(QPainter* i_painter)
 			{
 				if (m_map[i][j]->IsAlive())
 				{
+					setCellColor(m_map[i][j]->GetLives());
 					i_painter->setBrush(m_brushPoint);
 					i_painter->drawRect(i * m_scale, j * m_scale, m_scale, m_scale);
 				}
@@ -318,4 +321,14 @@ void CSpace::initCont(unsigned int i_width, unsigned int i_height)
 		map.push_back(row);
 	}
 	m_map.assign(map.begin(), map.end());
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void CSpace::setCellColor(unsigned int i_nlives)
+{
+	if (i_nlives >= COUNT_COLORS)
+	{
+		i_nlives = COUNT_COLORS -1;
+	}
+	m_brushPoint.setColor(sc_cellColors[i_nlives]);
 }
