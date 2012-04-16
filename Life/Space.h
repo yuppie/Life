@@ -6,7 +6,7 @@
 
 class Creature;
 
-typedef std::vector<unsigned short> SpaceRow;
+typedef std::vector<Creature*> SpaceRow;
 typedef std::vector<SpaceRow> SpaceCont;
 typedef SpaceRow::const_iterator SpaceRowIt;
 typedef SpaceCont::const_iterator SpaceContIt;
@@ -28,10 +28,11 @@ public:
 	void SetPoint(QPoint i_point);
 
 	unsigned int GetScale() const;
-	Creature* GetCreatureByPosition (const QPoint& i_point) const;
+	Creature* GetCreaturesNeighbour (const QPoint& i_creaturePoint, unsigned int i_whatNeighbour) const;
 
 protected:
 	void resizeMap();
+	void initCont(unsigned int i_width, unsigned int i_height);
 
 private:
 	unsigned int m_width;

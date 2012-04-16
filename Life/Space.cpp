@@ -33,9 +33,7 @@ CSpace::CSpace() : m_width(1),
 				   m_scale(1),
 				   m_rect(1, 1)
 {
-	SpaceRow row(m_width, 0);
-	SpaceCont map(m_height, row);
-	m_map.assign(map.begin(), map.end());
+	initCont(m_width, m_height);
 	m_pivot.setX(0);
 	m_pivot.setY(0);
 }
@@ -50,9 +48,8 @@ CSpace::CSpace(QPoint i_size)
 {
 	m_width = i_size.x() > 0 ? i_size.x() : 1;
 	m_height = i_size.y() > 0 ? i_size.y() : 1;
-	SpaceRow row(m_width, 0);
-	SpaceCont map(m_height, row);
-	m_map.assign(map.begin(), map.end());
+
+	initCont(m_width, m_height);	
 	m_pivot.setX(0);
 	m_pivot.setY(0);
 
@@ -108,13 +105,11 @@ CSpace::CSpace(const std::list<QPoint>& i_points) : m_scale(1),
 			m_pivot.setY(abs(maxBottom - maxTop)/2 + 1);
 		}
 	}
-	SpaceRow row(m_height, 0);
-	SpaceCont map(m_width, row);
-	m_map.assign(map.begin(), map.end());
+	initCont(m_width, m_height);
 	//Put init values into Space Container
 	for (std::list<QPoint>::const_iterator i = i_points.begin(); i != i_points.end(); ++i)
 	{
-		m_map[m_pivot.x()+i->x()][m_pivot.y() - i->y()] = 1;
+		m_map[m_pivot.x()+i->x()][m_pivot.y() - i->y()]->SetAlive(true);
 	}
 }
 
@@ -135,7 +130,7 @@ void CSpace::Draw(QPainter* i_painter)
 		{
 			for (unsigned int j = 0; j != m_height; ++j)
 			{
-				if (m_map[i][j] == 1)
+				if (m_map[i][j]->IsAlive())
 				{					
 					i_painter->setPen(pen);
 					i_painter->drawPoint(i,j);
@@ -150,7 +145,7 @@ void CSpace::Draw(QPainter* i_painter)
 		{
 			for (unsigned int j = 0; j != m_height; ++j)
 			{
-				if (m_map[i][j] == 1)
+				if (m_map[i][j]->IsAlive())
 				{
 					i_painter->setBrush(m_brushPoint);
 					i_painter->drawRect(i * m_scale, j * m_scale, m_scale, m_scale);
@@ -173,7 +168,6 @@ void CSpace::Draw(QPainter* i_painter)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void CSpace::Update()
 {
-	SpaceCont tempMap(m_map);
 	unsigned short leftUp(0), leftCt(0), leftDn(0), DownCt(0);
 	unsigned short rightUp(0), rightCt(0), rightDn(0), UpCt(0);
 
@@ -181,18 +175,14 @@ void CSpace::Update()
 	{
 		for (unsigned int j = 0; j < m_height; ++j)
 		{
-			// Correct neighbours
-			leftDn = (i > 0 && j < m_height - 1) ? tempMap[i-1][j+1] : 0;
-			leftCt = (i > 0) ? tempMap[i-1][j] : 0;
-			leftUp = (i > 0 && j > 0) ? tempMap[i-1][j-1] : 0;
-			UpCt = (j > 0) ? tempMap[i][j-1] : 0;
-			rightUp = (i < m_width - 1 && j > 0) ? tempMap[i+1][j-1] : 0;
-			rightCt = (i < m_width - 1) ? tempMap[i+1][j] : 0;
-			rightDn = (i < m_width - 1 && j < m_height - 1) ? tempMap[i+1][j+1] : 0;
-			DownCt = (j < m_height - 1) ? tempMap[i][j+1] : 0;
-			unsigned short neighbours[8] = {leftDn, leftCt, leftUp, UpCt, rightUp, rightCt, rightDn, DownCt};
-
-			m_map[i][j] = rule(tempMap[i][j], neighbours);
+			m_map[i][j]->Update();
+		}
+	}
+	for (unsigned int i = 0; i < m_width; ++i)
+	{
+		for (unsigned int j = 0; j < m_height; ++j)
+		{
+			m_map[i][j]->PostUpdateSwap();
 		}
 	}
 	resizeMap();	
@@ -214,7 +204,11 @@ void CSpace::SetPoint(QPoint i_point)
 	if ((i_point.x() >= 0 && i_point.x() <= m_width - 1)
 		&& (i_point.y() >= 0 && i_point.y() <= m_height - 1))
 	{
-		m_map[i_point.x()][i_point.y()] = (m_map[i_point.x()][i_point.y()] == 0) ? 1 : 0;
+		if (!m_map[i_point.x()][i_point.y()])
+		{
+			m_map[i_point.x()][i_point.y()] = new Creature(*this, i_point);
+		}
+		m_map[i_point.x()][i_point.y()]->SetAlive(!m_map[i_point.x()][i_point.y()]->IsAlive());
 	}
 	if (i_point.x() == 0 || i_point.x() == m_width - 1 || i_point.y() == 0 || i_point.y() == m_height - 1)
 	{
@@ -228,31 +222,58 @@ unsigned int CSpace::GetScale() const
 	return m_scale;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+Creature* CSpace::GetCreaturesNeighbour (const QPoint& i_creaturePoint, unsigned int i_whatNeighbour) const
+{
+	unsigned int i(i_creaturePoint.x());
+	unsigned int j(i_creaturePoint.y());
+	if ((i < 0 || i >= m_width)	|| (j < 0 || j >= m_height))
+	{
+		return NULL;
+	}
+	// Correct neighbours
+	Creature* cReturn;
+	switch (i_whatNeighbour)
+	{
+	/* Left Down */ case 0: cReturn = (i > 0 && j < m_height - 1) ? m_map[i-1][j+1] : NULL; break;
+	/* Left Cntr */ case 1: cReturn = (i > 0) ? m_map[i-1][j] : NULL; break;
+	/* Left Up   */ case 2: cReturn = (i > 0 && j > 0) ? m_map[i-1][j-1] : NULL; break;
+	/* Up Center */ case 3: cReturn = (j > 0) ? m_map[i][j-1] : NULL; break;
+	/* Right Up  */ case 4: cReturn = (i < m_width - 1 && j > 0) ? m_map[i+1][j-1] : NULL; break;
+	/* Right Cnt */ case 5: cReturn = (i < m_width - 1) ? m_map[i+1][j] : NULL; break;
+	/* Right Dwn */ case 6: cReturn = (i < m_width - 1 && j < m_height - 1) ? m_map[i+1][j+1] : NULL; break;
+	/* Down Cntr */ case 7: cReturn = (j < m_height - 1) ? m_map[i][j+1] : NULL; break;
+	/* Wrong pos */ default: cReturn = NULL;
+	}
+	return cReturn;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 void CSpace::resizeMap()
 {
 	bool upRow(false), downRow(false);
 	bool leftCol(false), rightCol(false);
 
 	//Should add row upwards/downwards
-	for (unsigned int i = 0; i < m_width - 1; ++i)
+	for (unsigned int i = 0; i < m_width; ++i)
 	{
-		if (m_map[i][0] == 1)
+		if (m_map[i][0]->IsAlive())
 		{
 			upRow = true;
 		}
-		if (m_map[i][m_height - 1] == 1)
+		if (m_map[i][m_height - 1]->IsAlive())
 		{
 			downRow = true;
 		}
 	}
 
-	for (unsigned int j = 1; j < m_height - 1; ++j)
+	for (unsigned int j = 0; j < m_height; ++j)
 	{
-		if (m_map[0][j] == 1)
+		if (m_map[0][j]->IsAlive())
 		{
 			leftCol = true;
 		}
-		if (m_map[m_width - 1][j] == 1)
+		if (m_map[m_width - 1][j]->IsAlive())
 		{
 			rightCol = true;
 		}
@@ -265,19 +286,36 @@ void CSpace::resizeMap()
 	if (leftCol) deltaCol = 1;
 	if (upRow) deltaRow = 1;
 
-	SpaceRow newRow(downRow ? m_height + deltaRow + 1 : m_height + deltaRow, 0);
-	SpaceCont newMap(rightCol ? m_width + deltaCol + 1 : m_width + deltaCol, newRow);
+	unsigned int newHeight = downRow ? m_height + deltaRow + 1 : m_height + deltaRow;
+	unsigned int newWidth = rightCol ? m_width + deltaCol + 1 : m_width + deltaCol;
+	SpaceCont oldMap(m_map);
+	initCont(newWidth, newHeight);
 	for (unsigned int i = 0; i != m_width; ++i)
 	{
 		for (unsigned int j = 0; j != m_height; ++j)
 		{
-			newMap[i + deltaCol][j + deltaRow] = m_map[i][j];
+			m_map[i + deltaCol][j + deltaRow] = oldMap[i][j];
 		}
 	}
-	m_height = newRow.size();
-	m_width = newMap.size();
+	m_width = newWidth;
+	m_height = newHeight;
 	m_scale = std::min<int>(m_rect.x()/m_width, m_rect.y()/m_height);
+}
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void CSpace::initCont(unsigned int i_width, unsigned int i_height)
+{
 	m_map.clear();
-	m_map.assign(newMap.begin(), newMap.end());
+	SpaceCont map;
+	for (unsigned int i = 0; i != i_width; ++i)
+	{
+		SpaceRow row;
+		for (unsigned int j = 0; j != i_height; ++j)
+		{
+			Creature* newCreature = new Creature(*this, QPoint(i,j));
+			row.push_back(newCreature);
+		}
+		map.push_back(row);
+	}
+	m_map.assign(map.begin(), map.end());
 }
