@@ -1,4 +1,5 @@
 #include "Space.h"
+#include "boost\weak_ptr.hpp"
 
 class Creature
 {
@@ -20,7 +21,7 @@ protected:
 private:
 	const CSpace& m_space;
 	QPoint m_position;
-	Creature* m_neighbours[COUNT_NEIGHBOURS];
+	boost::weak_ptr<Creature> m_neighbours[COUNT_NEIGHBOURS];
 	bool m_alive;
 	bool m_futureState;
 	unsigned int m_nlives;

@@ -11,7 +11,7 @@ Creature::Creature(const CSpace& i_space, const QPoint& i_position) :
 	// Init array!
 	for (unsigned int i = 0; i < 8; ++i)
 	{
-		m_neighbours[i] = NULL;
+		m_neighbours[i].reset();
 	}
 }
 
@@ -51,7 +51,8 @@ void Creature::Update()
 	unsigned sum(0);
 	for(unsigned int i = 0; i < 8; ++i)
 	{
-		if (m_neighbours[i] && m_neighbours[i]->IsAlive())
+		CreaturePtr neighbour(m_neighbours[i].lock());
+		if (neighbour.get() && neighbour->IsAlive())
 		{
 			sum++;
 		}
@@ -92,7 +93,8 @@ void Creature::updateNeighbours()
 {
 	for (unsigned int i = 0; i < 8; ++i)
 	{
-		if (!m_neighbours[i])
+		CreaturePtr neighbour(m_neighbours[i].lock());
+		if (!neighbour.get())
 		{
 			m_neighbours[i] = m_space.GetCreaturesNeighbour(m_position, i);
 		}

@@ -209,7 +209,7 @@ void CSpace::SetPoint(QPoint i_point)
 	{
 		if (!m_map[i_point.x()][i_point.y()])
 		{
-			m_map[i_point.x()][i_point.y()] = new Creature(*this, i_point);
+			m_map[i_point.x()][i_point.y()].reset(new Creature(*this, i_point));
 		}
 		m_map[i_point.x()][i_point.y()]->SetAlive(!m_map[i_point.x()][i_point.y()]->IsAlive());
 	}
@@ -226,27 +226,26 @@ unsigned int CSpace::GetScale() const
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-Creature* CSpace::GetCreaturesNeighbour (const QPoint& i_creaturePoint, unsigned int i_whatNeighbour) const
+CreaturePtr CSpace::GetCreaturesNeighbour (const QPoint& i_creaturePoint, unsigned int i_whatNeighbour) const
 {
+	CreaturePtr cReturn;
 	unsigned int i(i_creaturePoint.x());
 	unsigned int j(i_creaturePoint.y());
 	if ((i < 0 || i >= m_width)	|| (j < 0 || j >= m_height))
 	{
-		return NULL;
+		return cReturn;
 	}
 	// Correct neighbours
-	Creature* cReturn;
 	switch (i_whatNeighbour)
 	{
-	/* Left Down */ case 0: cReturn = (i > 0 && j < m_height - 1) ? m_map[i-1][j+1] : NULL; break;
-	/* Left Cntr */ case 1: cReturn = (i > 0) ? m_map[i-1][j] : NULL; break;
-	/* Left Up   */ case 2: cReturn = (i > 0 && j > 0) ? m_map[i-1][j-1] : NULL; break;
-	/* Up Center */ case 3: cReturn = (j > 0) ? m_map[i][j-1] : NULL; break;
-	/* Right Up  */ case 4: cReturn = (i < m_width - 1 && j > 0) ? m_map[i+1][j-1] : NULL; break;
-	/* Right Cnt */ case 5: cReturn = (i < m_width - 1) ? m_map[i+1][j] : NULL; break;
-	/* Right Dwn */ case 6: cReturn = (i < m_width - 1 && j < m_height - 1) ? m_map[i+1][j+1] : NULL; break;
-	/* Down Cntr */ case 7: cReturn = (j < m_height - 1) ? m_map[i][j+1] : NULL; break;
-	/* Wrong pos */ default: cReturn = NULL;
+		/* Left Down */ case 0: cReturn = (i > 0 && j < m_height - 1) ? m_map[i-1][j+1] : cReturn; break;
+	/* Left Cntr */ case 1: cReturn = (i > 0) ? m_map[i-1][j] : cReturn; break;
+	/* Left Up   */ case 2: cReturn = (i > 0 && j > 0) ? m_map[i-1][j-1] : cReturn; break;
+	/* Up Center */ case 3: cReturn = (j > 0) ? m_map[i][j-1] : cReturn; break;
+	/* Right Up  */ case 4: cReturn = (i < m_width - 1 && j > 0) ? m_map[i+1][j-1] : cReturn; break;
+	/* Right Cnt */ case 5: cReturn = (i < m_width - 1) ? m_map[i+1][j] : cReturn; break;
+	/* Right Dwn */ case 6: cReturn = (i < m_width - 1 && j < m_height - 1) ? m_map[i+1][j+1] : cReturn; break;
+	/* Down Cntr */ case 7: cReturn = (j < m_height - 1) ? m_map[i][j+1] : cReturn; break;
 	}
 	return cReturn;
 }
@@ -315,7 +314,7 @@ void CSpace::initCont(unsigned int i_width, unsigned int i_height)
 		SpaceRow row;
 		for (unsigned int j = 0; j != i_height; ++j)
 		{
-			Creature* newCreature = new Creature(*this, QPoint(i,j));
+			CreaturePtr newCreature (new Creature(*this, QPoint(i,j)));
 			row.push_back(newCreature);
 		}
 		map.push_back(row);

@@ -3,10 +3,12 @@
 #include <QPoint>
 #include <vector>
 #include <list>
+#include "boost\shared_ptr.hpp"
 
 class Creature;
 
-typedef std::vector<Creature*> SpaceRow;
+typedef boost::shared_ptr<Creature> CreaturePtr;
+typedef std::vector<CreaturePtr> SpaceRow;
 typedef std::vector<SpaceRow> SpaceCont;
 typedef SpaceRow::const_iterator SpaceRowIt;
 typedef SpaceCont::const_iterator SpaceContIt;
@@ -32,7 +34,7 @@ public:
 	void SetPoint(QPoint i_point);
 
 	unsigned int GetScale() const;
-	Creature* GetCreaturesNeighbour (const QPoint& i_creaturePoint, unsigned int i_whatNeighbour) const;
+	CreaturePtr GetCreaturesNeighbour (const QPoint& i_creaturePoint, unsigned int i_whatNeighbour) const;
 
 protected:
 	void resizeMap();
